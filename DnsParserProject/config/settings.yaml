@@ -1,0 +1,12 @@
+scraper:
+  max_workers: 3
+  requests_per_minute: 30
+  use_threading: true
+  save_to_excel: false
+
+database:
+  path: "C:/Users/user/PycharmProjects/ComplectPC/ComplectPC/db.sqlite3"
+
+logging:
+  level: "INFO"
+  file: "parser.log"
