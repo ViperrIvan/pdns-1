@@ -14,7 +14,7 @@ from .models import RamDataParser, CpuCoolerDataParser, CoolingSystemDataParser,
 
 class BrowserManager:
     @classmethod
-    def start_browser(cls, proxies):
+    def start_browser(cls, proxies=None):
         # 1. Расширенные настройки Chrome
         options = uc.ChromeOptions()
         options.add_argument('--disable-blink-features=AutomationControlled')
@@ -27,17 +27,18 @@ class BrowserManager:
         options.add_argument('--disable-notifications')
         options.add_argument('--disable-geolocation')
 
-        is_proxy_used = False
-        for proxy in proxies:
-            if cls.check_proxy_simple(proxy):
-                options.add_argument(f"--proxy-server={proxy}")
-                is_proxy_used = True
-
-        if not is_proxy_used:
-            print("Все прокси не доступны")
-            logging.error("❌ Не удается установить соединение ни с одним прокси")
-            logging.info("Завершение работы парсера...")
-            sys.exit()
+        if proxies:
+            is_proxy_used = False
+            for proxy in proxies:
+                if cls.check_proxy_simple(proxy):
+                    options.add_argument(f"--proxy-server={proxy}")
+                    is_proxy_used = True
+    
+            if not is_proxy_used:
+                print("Все прокси не доступны")
+                logging.error("❌ Не удается установить соединение ни с одним прокси")
+                logging.info("Завершение работы парсера...")
+                sys.exit()
 
 
         # 2. Ротация User-Agent
