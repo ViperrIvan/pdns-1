@@ -27,7 +27,7 @@ class AdvancedThreadedScraper:
 
             self.last_request_time = time.time()
 
-    def scrape_page_range(self, component: str, page_range: Tuple[int, int], base_url: str) -> List[Dict]:
+    def scrape_page_range(self, component: str, page_range: Tuple[int, int], base_url: str, proxies: list[str]) -> List[Dict]:
         """Парсинг диапазона страниц для одного компонента"""
         try:
             from .parser import DNSScraper, ParserFactory
@@ -37,7 +37,7 @@ class AdvancedThreadedScraper:
             print(f"Поток начинает парсинг {component} со страниц {start_page}-{end_page}")
 
             all_data = []
-            scraper = DNSScraper()
+            scraper = DNSScraper(proxies)
 
             page_urls = TaskDistributor.generate_page_urls(base_url, start_page, end_page)
 
@@ -65,7 +65,7 @@ class AdvancedThreadedScraper:
             print(f"Ошибка в потоке для {component}: {e}")
             return []
 
-    def scrape_component(self, component: str, base_url: str) -> Dict:
+    def scrape_component(self, component: str, base_url: str, proxies: list[str]) -> Dict:
         """Парсинг одного компонента с распределением по страницам"""
         try:
             from .scout import PageScout, TaskDistributor
@@ -82,7 +82,7 @@ class AdvancedThreadedScraper:
 
             with ThreadPoolExecutor(max_workers=min(self.max_workers, len(page_distributions))) as executor:
                 future_to_range = {
-                    executor.submit(self.scrape_page_range, component, page_range, base_url): page_range
+                    executor.submit(self.scrape_page_range, component, page_range, base_url, proxies): page_range
                     for page_range in page_distributions
                 }
 
@@ -111,13 +111,13 @@ class AdvancedThreadedScraper:
                 'error': str(e)
             }
 
-    def scrape_all(self, components_urls: Dict[str, str]) -> Dict[str, List[Dict]]:
+    def scrape_all(self, components_urls: Dict[str, str], proxies) -> Dict[str, List[Dict]]:
         """Многопоточный парсинг всех компонентов с распределением по страницам"""
         print(f"🚀 Запуск многопоточного парсера для {len(components_urls)} компонентов")
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_component = {
-                executor.submit(self.scrape_component, component, url): component
+                executor.submit(self.scrape_component, component, url, proxies): component
                 for component, url in components_urls.items()
             }
 
