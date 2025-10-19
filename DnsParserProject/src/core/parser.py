@@ -1,15 +1,20 @@
+import logging
+
+import sys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import random
 from time import sleep
 import undetected_chromedriver as uc
+import time
+import requests
 
-from .models import DataParser, ParserResult
+from .models import RamDataParser, CpuCoolerDataParser, CoolingSystemDataParser, CpuDataParser, GpuDataParser, MotherboardDataParser
 
 class BrowserManager:
     @classmethod
-    def start_browser(cls):
+    def start_browser(cls, proxies):
         # 1. Расширенные настройки Chrome
         options = uc.ChromeOptions()
         options.add_argument('--disable-blink-features=AutomationControlled')
@@ -21,6 +26,19 @@ class BrowserManager:
         options.add_argument('--disable-popup-blocking')
         options.add_argument('--disable-notifications')
         options.add_argument('--disable-geolocation')
+
+        is_proxy_used = False
+        for proxy in proxies:
+            if cls.check_proxy_simple(proxy):
+                options.add_argument(f"--proxy-server={proxy}")
+                is_proxy_used = True
+
+        if not is_proxy_used:
+            print("Все прокси не доступны")
+            logging.error("❌ Не удается установить соединение ни с одним прокси")
+            logging.info("Завершение работы парсера...")
+            sys.exit()
+
 
         # 2. Ротация User-Agent
         user_agents = [
@@ -63,9 +81,44 @@ class BrowserManager:
         driver.execute_script("arguments[0].scrollIntoView(true);", next_page_elem)
         sleep(random.uniform(1, 3))
 
+    @classmethod
+    def check_proxy_simple(cls, proxy, timeout=10):
+        proxies = {
+            'http': f'http://{proxy}',
+            'https': f'http://{proxy}'
+        }
+
+        try:
+            start_time = time.time()
+            response = requests.get(
+                'http://httpbin.org/ip',
+                proxies=proxies,
+                timeout=timeout
+            )
+            response_time = time.time() - start_time
+
+            if response.status_code == 200:
+                logging.info(1, f"✅ Прокси {proxy} доступен")
+                logging.info(1, f"⏱️  Время ответа: {response_time:.2f} сек")
+                logging.info(1, f"🌐 IP адрес: {response.json()['origin']}")
+                return True
+            else:
+                logging.error(f"❌ Прокси недоступен, статус: {response.status_code}")
+                return False
+
+        except requests.exceptions.ConnectTimeout:
+            logging.warn(f"⏰ Таймаут подключения к прокси {proxy}")
+            return False
+        except requests.exceptions.ConnectionError:
+            logging.error(f"🔌 Ошибка подключения к прокси {proxy}")
+            return False
+        except Exception as e:
+            logging.error(f"❌ Ошибка при проверке прокси: {e}")
+            return False
+
 class DNSScraper:
-    def __init__(self):
-        self.driver = BrowserManager.start_browser()
+    def __init__(self, proxies):
+        self.driver = BrowserManager.start_browser(proxies)
         self.xpathes = {
             "name": "//div[@class='catalog-product__name-wrapper']//span",
             "price": "//div[@class='product-buy__price']",
