@@ -20,6 +20,8 @@ class Config:
         'cooling_system': "https://www.dns-shop.ru/catalog/17a9cc9816404e77/sistemy-zhidkostnogo-ohlazhdeniya/",
     }
 
+    PROXIES = [0, 1, 2, 3, 4, 5, 6, 7]
+
     @classmethod
     def get_components(cls):
         return list(cls.URLS.keys())
