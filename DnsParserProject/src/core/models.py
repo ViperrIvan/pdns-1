@@ -61,6 +61,7 @@ class RamDataParser(DataParser):
             print(f"Ошибка обработки данных: {e} в строке: {ram_string}")
             return None
 
+
 class MotherboardDataParser(DataParser):
     @classmethod
     def data_dict_creator(cls, component_info):
@@ -68,13 +69,12 @@ class MotherboardDataParser(DataParser):
         price = component_info[1]
         href = component_info[2]
         # Основные параметры для поиска
-        socket_match = re.search(r'(LGA\s\d+|BGA\d+|Socket\s*\d+|s?\d+)', mb_string, re.IGNORECASE)
+        socket_match = re.search(r'\b(LGA\s?\d+|BGA\d+|Socket\s?\d+|s\d+)\b', mb_string, re.IGNORECASE)
         chipset_match = re.search(r'(Intel|AMD)\s*([A-Z0-9]+)', mb_string, re.IGNORECASE)
         ram_slots_match = re.search(r'(\d+)x(DDR\d[L]?)[-\s]*(\d+)?\s*МГц', mb_string, re.IGNORECASE)
         form_factor_match = re.search(r'(Micro-ATX|Mini-ITX|Mini-DTX|ATX|E-ATX|XL-ATX|Thin Mini-ITX)', mb_string,
                                       re.IGNORECASE)
         pcie_match = re.search(r'(\d+)xPCI-Ex(\d+)', mb_string, re.IGNORECASE)
-        cpu_support_match = re.search(r'(Intel|AMD)\s*(.*?)\s*\(', mb_string)
 
         try:
             result = {
@@ -89,16 +89,8 @@ class MotherboardDataParser(DataParser):
                     3) else "N/A",
                 "Форм-фактор": form_factor_match.group() if form_factor_match else "Нестандартный",
                 "Количество слотов PCI-E": int(pcie_match.group(1)) if pcie_match else "N/A",
-                "Версия слотов PCI-E": f"x{pcie_match.group(2)}" if pcie_match else "N/A",
-                "Поддержка CPU": cpu_support_match.group().strip() if cpu_support_match else "N/A"
+                "Версия слотов PCI-E": f"x{pcie_match.group(2)}" if pcie_match else "N/A"
             }
-
-            # Дополнительно проверяем поддержку CPU в другом формате
-            if result["Поддержка CPU"] == "N/A":
-                cpu_alt_match = re.search(r'\b(?:Intel|AMD)\b.*?(?:Celeron|Core|Ryzen|Athlon)\s*\w*', mb_string,
-                                          re.IGNORECASE)
-                if cpu_alt_match:
-                    result["Поддержка CPU"] = cpu_alt_match.group().strip()
 
             return result
         except (ValueError, AttributeError, IndexError) as e:
